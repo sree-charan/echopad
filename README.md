@@ -1,79 +1,66 @@
-# Live Editor
+Firepad Collaborative Editor
+A simple, powerful, and self-hostable real-time collaborative code editor built with Firepad, CodeMirror, and Firebase. This project provides a clean, modern, and mobile-friendly interface for seamless collaborative coding.
 
-A real-time code editor built with modern web technologies for live coding and collaboration.
+Features
+Real-Time Collaboration: Powered by Firepad and Firebase Realtime Database for true, low-latency, character-by-character synchronization.
 
-## Features
+Syntax Highlighting: Supports multiple languages out of the box, including JavaScript, Python, HTML, and CSS.
 
-- Real-time code editing
-- Syntax highlighting
-- Multiple language support
-- Live preview
-- Responsive design
-- Modern UI/UX
+Customizable Themes: Easily switch between light and dark editor themes.
 
-## Getting Started
+Mobile Friendly: A responsive design that works on both desktop and mobile devices, with an auto-hiding header on mobile to maximize screen space.
 
-### Prerequisites
+Easy Document Sharing: Automatically generates short, shareable URLs for each new document.
 
-- Node.js (v14 or higher)
-- npm or yarn
+Essential Editor Tools: Includes one-tap buttons for creating a new document, copying the share link, clearing the document, and selecting/copying all content.
 
-### Installation
+Zero Backend Code: The entire application is a single index.html file that runs client-side, making it incredibly easy to deploy.
 
-1. Clone the repository:
-```bash
-git clone https://github.com/sree-charan/liveeditor.git
-cd liveeditor
-```
+How to Use
+The user interface is designed to be simple and intuitive:
 
-2. Install dependencies:
-```bash
-npm install
-```
+New: Instantly creates a new document with a fresh, unique URL.
 
-3. Start the development server:
-```bash
-npm start
-```
+Copy Link: Copies the URL of the current document to your clipboard so you can share it with others.
 
-4. Open your browser and navigate to `http://localhost:3000`
+Select & Copy: A mobile-friendly utility that reliably selects all text in the editor and copies it to your clipboard in one tap.
 
-## Usage
+Clear: Deletes all content in the current document for all collaborators.
 
-1. Open the live editor in your browser
-2. Select your preferred programming language
-3. Start coding in the editor
-4. See live updates and syntax highlighting
-5. Use the preview panel for real-time output
+Lang: A dropdown menu to change the syntax highlighting for the current document.
 
-## Built With
+Theme: A dropdown menu to switch between the editor's visual themes.
 
-- HTML5
-- CSS3
-- JavaScript
-- Modern web APIs
+Setup & Deployment
+Getting your own instance of this editor running is simple.
 
-## Contributing
+Step 1: Create a Firebase Project
+Go to the Firebase Console and create a new project.
 
-1. Fork the project
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+In the "Build" menu on the left, click Realtime Database.
 
-## GitHub Repository
+Click Create Database, select a server location, and start in Test mode. (You can secure your database later with security rules if needed).
 
-Visit the project repository: [https://github.com/sree-charan/liveeditor](https://github.com/sree-charan/liveeditor)
+Step 2: Get Your Firebase Configuration
+In your Firebase project, go to Project settings (click the gear icon at the top of the left menu).
 
-## License
+Scroll down to the "Your apps" card.
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+Click the Web icon (</>) to create a new web app.
 
-## Author
+Give it a nickname (e.g., "Firepad Editor") and click Register app.
 
-**Sree Charan** - [GitHub Profile](https://github.com/sree-charan)
+Firebase will display a firebaseConfig object. Copy this entire object.
 
-## Acknowledgments
+Step 3: Configure and Deploy
+Open the index.html file.
 
-- Thanks to all contributors who helped build this project
-- Inspired by modern code editors and live coding environments
+Find the firebaseConfig object in the <script> section.
+
+Paste your own configuration object over the placeholder.
+
+Save the file.
+
+Deploy the single index.html file to any static hosting provider (Firebase Hosting, Netlify, Vercel, GitHub Pages, etc.).
+
+Your collaborative editor is now live!
