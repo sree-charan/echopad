@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firepad Collaborative Editor</title>
+
+    <!-- TailwindCSS for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Firebase (version 8, compatible with Firepad) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <!-- CodeMirror -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css" />
+    
+    <!-- CodeMirror Language Modes -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+    
+    <!-- Firepad -->
+    <script src="https://cdn.jsdelivr.net/npm/firepad@1.5.11/dist/firepad.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/firepad@1.5.11/dist/firepad.css" />
+
+    <!-- Custom Styling -->
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background-color: #1f2937; /* bg-gray-800 */
+        }
+        #main-content {
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+        #firepad-container {
+            flex-grow: 1;
+            height: 100%;
+        }
+        .CodeMirror {
+            height: 100%;
+            font-size: 14px;
+        }
+        .firepad .powered-by-firepad {
+            display: none;
+        }
+        /* Helps browsers optimize the header animation to prevent rendering glitches */
+        #editor-header {
+            will-change: transform;
+            /* This forces the element onto its own compositing layer, which can 
+               fix issues where a "ghost" of the element is left behind during animations. */
+            transform: translateZ(0);
+        }
+    </style>
+</head>
+<body class="bg-gray-800 text-white">
+
+    <!-- Header -->
+    <header id="editor-header" class="sticky top-0 z-20 bg-gray-900 border-b border-gray-700 p-3 flex flex-wrap items-center justify-center sm:justify-between gap-3 shadow-md flex-shrink-0 transition-transform duration-300 ease-in-out">
+        <!-- Group 1: Title & Actions -->
+        <div class="flex items-center gap-3">
+            <span class="text-lg font-bold text-white hidden sm:inline">Firepad Editor</span>
+            <button id="new-doc-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded-md text-sm transition-colors">New</button>
+            <button id="copy-link-btn" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-3 rounded-md text-sm transition-colors">Copy Link</button>
+            <button id="select-all-btn" class="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-1 px-3 rounded-md text-sm transition-colors">Select & Copy</button>
+            <button id="clear-doc-btn" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-1 px-3 rounded-md text-sm transition-colors">Clear</button>
+        </div>
+        <!-- Group 2: Settings -->
+        <div class="flex items-center flex-wrap justify-center gap-4">
+            <div class="flex items-center gap-2">
+                <label for="language-select" class="text-sm font-medium">Lang:</label>
+                <select id="language-select" class="bg-gray-700 border border-gray-600 rounded-md text-sm py-1 px-2">
+                    <option value="javascript">JavaScript</option>
+                    <option value="python">Python</option>
+                    <option value="htmlmixed">HTML</option>
+                    <option value="css">CSS</option>
+                    <option value="text/plain">Plain Text</option>
+                </select>
+            </div>
+            <div class="flex items-center gap-2">
+                <label for="theme-select" class="text-sm font-medium">Theme:</label>
+                <select id="theme-select" class="bg-gray-700 border border-gray-600 rounded-md text-sm py-1 px-2">
+                    <option value="material-darker">Dark</option>
+                    <option value="default">Light</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <div id="main-content">
+        <!-- Firepad Editor -->
+        <div id="firepad-container"></div>
+    </div>
+
+    <script>
+        let firepadInstance = null;
+        let codeMirrorInstance = null;
+
+        function init() {
+            if (firepadInstance) {
+                firepadInstance.dispose();
+            }
+            document.getElementById('firepad-container').innerHTML = '';
+
+            const firebaseConfig = {
+              apiKey: "AIzaSyA8wUu5VNbzAG4tYIAvQc2G8l2SaeFj99I",
+              authDomain: "live-editor-2aecd.firebaseapp.com",
+              databaseURL: "https://live-editor-2aecd-default-rtdb.firebaseio.com",
+              projectId: "live-editor-2aecd",
+              storageBucket: "live-editor-2aecd.firebasestorage.app",
+              messagingSenderId: "507271903350",
+              appId: "1:507271903350:web:a4e875a7e4cddf56308757"
+            };
+
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+
+            const docRef = getFirebaseRef();
+
+            codeMirrorInstance = CodeMirror(document.getElementById('firepad-container'), {
+                lineNumbers: true,
+                mode: document.getElementById('language-select').value,
+                theme: document.getElementById('theme-select').value,
+                lineWrapping: true // This enables text wrapping on all devices
+            });
+
+            const userId = Math.floor(Math.random() * 9999999999).toString();
+            firepadInstance = Firepad.fromCodeMirror(docRef, codeMirrorInstance, {
+                userId: userId,
+                defaultText: '// Welcome to your new collaborative editor!\n// Share the URL to invite others.'
+            });
+
+            setupEventListeners();
+            setupScrollBehavior();
+        }
+
+        function setupEventListeners() {
+            document.getElementById('new-doc-btn').onclick = () => {
+                window.location.hash = generateShortId();
+            };
+
+            document.getElementById('copy-link-btn').onclick = () => {
+                const btn = document.getElementById('copy-link-btn');
+                navigator.clipboard.writeText(window.location.href).then(() => {
+                    btn.textContent = 'Copied!';
+                    setTimeout(() => { btn.textContent = 'Copy Link'; }, 2000);
+                });
+            };
+
+            document.getElementById('select-all-btn').onclick = () => {
+                if (codeMirrorInstance) {
+                    const btn = document.getElementById('select-all-btn');
+                    // Use CodeMirror's API to reliably select all text
+                    codeMirrorInstance.execCommand('selectAll');
+                    // Get the selected text
+                    const textToCopy = codeMirrorInstance.getSelection();
+                    // Copy the text to the clipboard
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        btn.textContent = 'Copied!';
+                        setTimeout(() => { btn.textContent = 'Select & Copy'; }, 2000);
+                    });
+                    codeMirrorInstance.focus(); // Keep focus to help mobile browsers
+                }
+            };
+
+            document.getElementById('clear-doc-btn').onclick = () => {
+                if (firepadInstance) {
+                    firepadInstance.setText('');
+                }
+            };
+
+            document.getElementById('theme-select').onchange = (e) => {
+                codeMirrorInstance.setOption('theme', e.target.value);
+            };
+
+            document.getElementById('language-select').onchange = (e) => {
+                codeMirrorInstance.setOption('mode', e.target.value);
+            };
+        }
+
+        function setupScrollBehavior() {
+            const header = document.getElementById('editor-header');
+            let lastScrollY = 0;
+
+            const scroller = codeMirrorInstance.getScrollerElement();
+
+            scroller.addEventListener('scroll', () => {
+                // Only apply this behavior on smaller screens (mobile devices)
+                if (window.innerWidth < 640) {
+                    const currentScrollY = scroller.scrollTop;
+                    if (currentScrollY > lastScrollY && currentScrollY > 50) {
+                        // Scrolling down
+                        header.classList.add('-translate-y-full');
+                    } else {
+                        // Scrolling up
+                        header.classList.remove('-translate-y-full');
+                    }
+                    lastScrollY = currentScrollY <= 0 ? 0 : currentScrollY;
+                }
+            });
+        }
+
+        function generateShortId(length = 6) {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
+        function getFirebaseRef() {
+            const ref = firebase.database().ref();
+            let hash = window.location.hash.replace(/#/g, '');
+            if (hash) {
+                return ref.child(hash);
+            } else {
+                const newDocId = generateShortId();
+                window.location.replace(window.location.pathname + '#' + newDocId);
+                return ref.child(newDocId);
+            }
+        }
+
+        window.addEventListener('hashchange', init);
+        window.onload = init;
+    </script>
+</body>
+</html>
