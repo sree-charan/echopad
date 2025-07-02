@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EchoPad - Gemini-Powered Collaborative Editor</title>
+    <title>EchoPad - AI Powered Collaborative Editor</title>
 
     <!-- TailwindCSS for modern styling -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -288,14 +288,25 @@
                 // **FIX:** Changed the model name to a correct, current one.
                 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
                 const language = document.getElementById('language-select').value;
-                const prompt = `You are an expert code assistant. A user has selected the following piece of code written in ${language}. Your task is to provide a concise, helpful response. You can either: 1. Explain what the code does. 2. Suggest improvements or bug fixes. 3. Complete the code if it's unfinished. Keep your response brief and to the point. Do not include the original code in your response. Format your entire response as plain text, not Markdown. Code snippet:\n---\n${selectedText}\n---`;
-                const result = await model.generateContent(prompt);
+                const prompt = `You are a helpful and intelligent general-purpose assistant. A user has selected some text from their document. Your task is to provide the most relevant and helpful response possible.
+
+- If the selected text is a **question**, answer it directly and concisely.
+- If the selected text is a **topic or a statement**, provide a clear explanation, a summary, or additional insightful information about it.
+- If the selected text appears to be a **snippet of code**, briefly explain what it does and offer one key suggestion for improvement if applicable.
+
+**IMPORTANT RULE: Your entire output must be plain text. Do NOT use any formatting whatsoever. This includes, but is not limited to, Markdown, bolding, italics, bullet points, numbered lists, or code blocks. Your response must be raw, unformatted text.**
+
+Selected Text:
+---
+${selectedText}
+---
+`;                const result = await model.generateContent(prompt);
                 const response = await result.response;
                 const text = response.text();
                 const commentStart = language === 'python' ? '#' : '/*';
                 const commentEnd = language === 'python' ? '' : '*/';
                 const linePrefix = language === 'python' ? '# ' : ' * ';
-                let formattedResponse = `\n\n${commentStart} ✨ Gemini Suggestion ✨\n`;
+                let formattedResponse = `\n\n${commentStart} ✨Suggestion✨\n`;
                 formattedResponse += `${linePrefix}-----------------------------\n`;
                 const indentedText = text.split('\n').map(line => `${linePrefix}${line}`).join('\n');
                 formattedResponse += `${indentedText}\n`;
