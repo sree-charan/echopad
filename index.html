@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EchoPad - Collaborative Text Editor</title>
-
+    <title>EchoPad - Gemini-Powered Collaborative Editor</title>
 
     <!-- TailwindCSS for modern styling -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -17,14 +16,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css" />
-    
+
     <!-- CodeMirror Language Modes -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
-    
+
     <!-- Firepad -->
     <script src="https://cdn.jsdelivr.net/npm/firepad@1.5.11/dist/firepad.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/firepad@1.5.11/dist/firepad.css" />
@@ -36,6 +35,7 @@
             flex-direction: column;
             height: 100vh;
             background-color: #1f2937; /* bg-gray-800 */
+            font-family: 'Inter', sans-serif;
         }
         #main-content {
             display: flex;
@@ -53,29 +53,51 @@
         .firepad .powered-by-firepad {
             display: none;
         }
-        /* Helps browsers optimize the header animation to prevent rendering glitches */
         #editor-header {
             will-change: transform;
-            /* This forces the element onto its own compositing layer, which can 
-               fix issues where a "ghost" of the element is left behind during animations. */
             transform: translateZ(0);
         }
+        #api-key-modal {
+            background-color: rgba(0, 0, 0, 0.5);
+        }
     </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
 <body class="bg-gray-800 text-white">
+
+    <!-- API Key Modal -->
+    <div id="api-key-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div class="bg-gray-800 border border-gray-600 p-6 rounded-lg shadow-xl w-full max-w-md mx-4">
+            <h2 class="text-xl font-bold mb-4 text-white">Enter Gemini API Key</h2>
+            <p class="text-gray-400 mb-4 text-sm">To use the AI features, please provide your Google AI API key. You can get one from <a href="https://aistudio.google.com/" target="_blank" class="text-blue-400 hover:underline">Google AI Studio</a>.</p>
+            <input type="password" id="api-key-input" class="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white mb-4" placeholder="Enter your API key here">
+            <div class="flex justify-end gap-3">
+                <button id="cancel-api-key" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-md text-sm transition-colors">Cancel</button>
+                <button id="save-api-key" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md text-sm transition-colors">Save & Continue</button>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Header -->
     <header id="editor-header" class="sticky top-0 z-20 bg-gray-900 border-b border-gray-700 p-3 flex flex-wrap items-center justify-center sm:justify-between gap-3 shadow-md flex-shrink-0 transition-transform duration-300 ease-in-out">
         <!-- Group 1: Title & Actions -->
         <div class="flex items-center gap-3">
-            <span class="text-lg font-bold text-white hidden sm:inline">Echopad</span>
+            <span class="text-lg font-bold text-white hidden sm:inline">EchoPad</span>
             <button id="new-doc-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded-md text-sm transition-colors">New</button>
             <button id="copy-link-btn" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-3 rounded-md text-sm transition-colors">Copy Link</button>
             <button id="select-all-btn" class="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-1 px-3 rounded-md text-sm transition-colors">Select & Copy</button>
             <button id="clear-doc-btn" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-1 px-3 rounded-md text-sm transition-colors">Clear</button>
         </div>
-        <!-- Group 2: Settings -->
+
+        <!-- Group 2: AI & Settings -->
         <div class="flex items-center flex-wrap justify-center gap-4">
+            <button id="gemini-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-1 px-3 rounded-md text-sm transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-stars" viewBox="0 0 16 16"><path d="M7.657 6.247c.11-.33.576-.33.686 0l.645 1.937a2.89 2.89 0 0 0 1.829 1.828l1.936.645c.33.11.33.576 0 .686l-1.937.645a2.89 2.89 0 0 0-1.828 1.829l-.645 1.936a.361.361 0 0 1-.686 0l-.645-1.937a2.89 2.89 0 0 0-1.828-1.828l-1.937-.645a.361.361 0 0 1 0-.686l1.937-.645a2.89 2.89 0 0 0 1.828-1.828zM3.794 1.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387A1.73 1.73 0 0 0 4.58 5.794l-.387 1.162a.217.217 0 0 1-.412 0L3.4 5.794A1.73 1.73 0 0 0 2.206 4.58l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387A1.73 1.73 0 0 0 3.4 2.31zM10.893 10.893a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387a1.73 1.73 0 0 0-1.097 1.097l-.387 1.162a.217.217 0 0 1-.412 0l-.387-1.162a1.73 1.73 0 0 0-1.097-1.097l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387a1.73 1.73 0 0 0 1.097-1.097z"/></svg>
+                
+            </button>
             <div class="flex items-center gap-2">
                 <label for="language-select" class="text-sm font-medium">Lang:</label>
                 <select id="language-select" class="bg-gray-700 border border-gray-600 rounded-md text-sm py-1 px-2">
@@ -102,16 +124,38 @@
         <div id="firepad-container"></div>
     </div>
 
-    <script>
+    <script type="module">
+        import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+
         let firepadInstance = null;
         let codeMirrorInstance = null;
+        let genAI = null;
 
+        /**
+         * Initializes the entire editor application.
+         */
         function init() {
             if (firepadInstance) {
                 firepadInstance.dispose();
             }
             document.getElementById('firepad-container').innerHTML = '';
 
+            // --- Gemini API Initialization ---
+            const apiKey = localStorage.getItem('geminiApiKey');
+            document.getElementById('gemini-btn').disabled = false;
+            genAI = null;
+
+            if (apiKey && typeof GoogleGenerativeAI !== 'undefined') {
+                try {
+                    genAI = new GoogleGenerativeAI(apiKey);
+                } catch (error) {
+                    console.error("Failed to initialize GoogleGenerativeAI, likely an invalid key:", error);
+                    localStorage.removeItem('geminiApiKey');
+                    genAI = null;
+                }
+            }
+
+            // --- Firebase Initialization ---
             const firebaseConfig = {
               apiKey: "AIzaSyA8wUu5VNbzAG4tYIAvQc2G8l2SaeFj99I",
               authDomain: "live-editor-2aecd.firebaseapp.com",
@@ -126,30 +170,31 @@
                 firebase.initializeApp(firebaseConfig);
             }
 
+            // --- CodeMirror and Firepad Initialization ---
             const docRef = getFirebaseRef();
-
             codeMirrorInstance = CodeMirror(document.getElementById('firepad-container'), {
                 lineNumbers: true,
                 mode: document.getElementById('language-select').value,
                 theme: document.getElementById('theme-select').value,
-                lineWrapping: true // This enables text wrapping on all devices
+                lineWrapping: true
             });
-
             const userId = Math.floor(Math.random() * 9999999999).toString();
             firepadInstance = Firepad.fromCodeMirror(docRef, codeMirrorInstance, {
                 userId: userId,
-                defaultText: '// Welcome to your new collaborative editor!\n// Share the URL to invite others.'
+                defaultText: '// Welcome to EchoPad!\n// 1. Click "Ask Gemini" to enter your API key.\n// 2. Select code and click again for suggestions.\n// 3. Share the URL to collaborate.'
             });
 
             setupEventListeners();
             setupScrollBehavior();
         }
 
+        /**
+         * Sets up all the event listeners for the UI controls.
+         */
         function setupEventListeners() {
             document.getElementById('new-doc-btn').onclick = () => {
                 window.location.hash = generateShortId();
             };
-
             document.getElementById('copy-link-btn').onclick = () => {
                 const btn = document.getElementById('copy-link-btn');
                 navigator.clipboard.writeText(window.location.href).then(() => {
@@ -157,53 +202,131 @@
                     setTimeout(() => { btn.textContent = 'Copy Link'; }, 2000);
                 });
             };
-
             document.getElementById('select-all-btn').onclick = () => {
                 if (codeMirrorInstance) {
                     const btn = document.getElementById('select-all-btn');
-                    // Use CodeMirror's API to reliably select all text
                     codeMirrorInstance.execCommand('selectAll');
-                    // Get the selected text
                     const textToCopy = codeMirrorInstance.getSelection();
-                    // Copy the text to the clipboard
-                    navigator.clipboard.writeText(textToCopy).then(() => {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = textToCopy;
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    try {
+                        document.execCommand('copy');
                         btn.textContent = 'Copied!';
                         setTimeout(() => { btn.textContent = 'Select & Copy'; }, 2000);
-                    });
-                    codeMirrorInstance.focus(); // Keep focus to help mobile browsers
+                    } catch (err) {
+                        console.error('Fallback: Oops, unable to copy', err);
+                    }
+                    document.body.removeChild(textArea);
+                    codeMirrorInstance.focus();
                 }
             };
-
             document.getElementById('clear-doc-btn').onclick = () => {
                 if (firepadInstance) {
                     firepadInstance.setText('');
                 }
             };
-
             document.getElementById('theme-select').onchange = (e) => {
                 codeMirrorInstance.setOption('theme', e.target.value);
             };
-
             document.getElementById('language-select').onchange = (e) => {
                 codeMirrorInstance.setOption('mode', e.target.value);
             };
+
+            // --- Gemini and API Key Modal Listeners ---
+            const apiKeyModal = document.getElementById('api-key-modal');
+            document.getElementById('gemini-btn').onclick = () => {
+                if (!genAI) {
+                    apiKeyModal.classList.remove('hidden');
+                } else {
+                    callGemini();
+                }
+            };
+            document.getElementById('save-api-key').onclick = () => {
+                const apiKey = document.getElementById('api-key-input').value;
+                if (apiKey && typeof GoogleGenerativeAI !== 'undefined') {
+                    try {
+                        new GoogleGenerativeAI(apiKey); 
+                        genAI = new GoogleGenerativeAI(apiKey);
+                        localStorage.setItem('geminiApiKey', apiKey);
+                        apiKeyModal.classList.add('hidden');
+                        document.getElementById('api-key-input').value = '';
+                    } catch (error) {
+                        alert("Invalid API Key or failed to initialize. Please check the key and try again.");
+                        console.error(error);
+                    }
+                } else {
+                    alert("Please enter a valid API key.");
+                }
+            };
+            document.getElementById('cancel-api-key').onclick = () => {
+                apiKeyModal.classList.add('hidden');
+            };
         }
 
+        /**
+         * Handles the call to the Gemini API.
+         */
+        async function callGemini() {
+            if (!genAI) {
+                document.getElementById('api-key-modal').classList.remove('hidden');
+                return;
+            }
+            const selectedText = codeMirrorInstance.getSelection();
+            if (!selectedText.trim()) {
+                alert("Please select some text first to give Gemini context.");
+                return;
+            }
+            const geminiBtn = document.getElementById('gemini-btn');
+            geminiBtn.disabled = true;
+            geminiBtn.innerHTML = `
+                <svg class="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                Thinking...`;
+            try {
+                // **FIX:** Changed the model name to a correct, current one.
+                const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+                const language = document.getElementById('language-select').value;
+                const prompt = `You are an expert code assistant. A user has selected the following piece of code written in ${language}. Your task is to provide a concise, helpful response. You can either: 1. Explain what the code does. 2. Suggest improvements or bug fixes. 3. Complete the code if it's unfinished. Keep your response brief and to the point. Do not include the original code in your response. Format your entire response as plain text, not Markdown. Code snippet:\n---\n${selectedText}\n---`;
+                const result = await model.generateContent(prompt);
+                const response = await result.response;
+                const text = response.text();
+                const commentStart = language === 'python' ? '#' : '/*';
+                const commentEnd = language === 'python' ? '' : '*/';
+                const linePrefix = language === 'python' ? '# ' : ' * ';
+                let formattedResponse = `\n\n${commentStart} ✨ Gemini Suggestion ✨\n`;
+                formattedResponse += `${linePrefix}-----------------------------\n`;
+                const indentedText = text.split('\n').map(line => `${linePrefix}${line}`).join('\n');
+                formattedResponse += `${indentedText}\n`;
+                if(commentEnd) formattedResponse += ` ${commentEnd}\n`;
+                const doc = codeMirrorInstance.getDoc();
+                const cursor = doc.getCursor("to");
+                doc.replaceRange(formattedResponse, cursor);
+            } catch (error) {
+                console.error("Error calling Gemini API:", error);
+                alert("An error occurred while communicating with Gemini. Check the console for details.");
+            } finally {
+                geminiBtn.disabled = false;
+                geminiBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-stars" viewBox="0 0 16 16"><path d="M7.657 6.247c.11-.33.576-.33.686 0l.645 1.937a2.89 2.89 0 0 0 1.829 1.828l1.936.645c.33.11.33.576 0 .686l-1.937.645a2.89 2.89 0 0 0-1.828 1.829l-.645 1.936a.361.361 0 0 1-.686 0l-.645-1.937a2.89 2.89 0 0 0-1.828-1.828l-1.937-.645a.361.361 0 0 1 0-.686l1.937-.645a2.89 2.89 0 0 0 1.828-1.828zM3.794 1.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387A1.73 1.73 0 0 0 4.58 5.794l-.387 1.162a.217.217 0 0 1-.412 0L3.4 5.794A1.73 1.73 0 0 0 2.206 4.58l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387A1.73 1.73 0 0 0 3.4 2.31zM10.893 10.893a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387a1.73 1.73 0 0 0-1.097 1.097l-.387 1.162a.217.217 0 0 1-.412 0l-.387-1.162a1.73 1.73 0 0 0-1.097-1.097l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387a1.73 1.73 0 0 0 1.097-1.097z"/></svg>
+                    Ask Gemini`;
+            }
+        }
+
+        /**
+         * Hides the header on scroll down and shows it on scroll up on mobile.
+         */
         function setupScrollBehavior() {
             const header = document.getElementById('editor-header');
             let lastScrollY = 0;
-
             const scroller = codeMirrorInstance.getScrollerElement();
-
             scroller.addEventListener('scroll', () => {
-                // Only apply this behavior on smaller screens (mobile devices)
                 if (window.innerWidth < 640) {
                     const currentScrollY = scroller.scrollTop;
                     if (currentScrollY > lastScrollY && currentScrollY > 50) {
-                        // Scrolling down
                         header.classList.add('-translate-y-full');
                     } else {
-                        // Scrolling up
                         header.classList.remove('-translate-y-full');
                     }
                     lastScrollY = currentScrollY <= 0 ? 0 : currentScrollY;
@@ -211,6 +334,9 @@
             });
         }
 
+        /**
+         * Generates a short, random ID for new documents.
+         */
         function generateShortId(length = 6) {
             const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
             let result = '';
@@ -220,6 +346,9 @@
             return result;
         }
 
+        /**
+         * Gets the Firebase database reference based on the URL hash.
+         */
         function getFirebaseRef() {
             const ref = firebase.database().ref();
             let hash = window.location.hash.replace(/#/g, '');
@@ -232,8 +361,9 @@
             }
         }
 
+        init();
         window.addEventListener('hashchange', init);
-        window.onload = init;
+
     </script>
 </body>
 </html>
