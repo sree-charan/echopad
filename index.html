@@ -13,7 +13,7 @@
     <!-- CodeMirror -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/ayu-dark.min.css" />
     <!-- CodeMirror Language Modes -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
@@ -25,12 +25,13 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/firepad@1.5.11/dist/firepad.css" />
     <!-- Custom Styling -->
     <style>
-        body { display: flex; flex-direction: column; height: 100vh; background-color: #1f2937; /* bg-gray-800 */ font-family: 'Inter', sans-serif; }
-        #main-content { display: flex; flex-grow: 1; overflow: hidden; }
-        #firepad-container { flex-grow: 1; height: 100%; }
+        html, body { background-color: #1f2937; }
+        body { display: flex; flex-direction: column; height: 100vh; font-family: 'Inter', sans-serif; }
+        #main-content { display: flex; flex-grow: 1; overflow: hidden; min-height: 0; }
+        #firepad-container { flex-grow: 1; height: 100%; min-height: 0; }
         .CodeMirror { height: 100%; font-size: 14px; }
         .firepad .powered-by-firepad { display: none; }
-        #editor-header { will-change: transform; transform: translateZ(0); }
+        #editor-header { will-change: max-height; max-height: 200px; transition: max-height 0.3s ease, padding 0.3s ease; }
         #api-key-modal { background-color: rgba(0, 0, 0, 0.5); }
         .notification { transition: opacity 0.5s, transform 0.5s; }
     </style>
@@ -53,7 +54,7 @@
     </div>
 
     <!-- Header -->
-    <header id="editor-header" class="sticky top-0 z-20 bg-gray-900 border-b border-gray-700 p-3 flex flex-wrap items-center justify-center sm:justify-between gap-3 shadow-md flex-shrink-0 transition-transform duration-300 ease-in-out">
+    <header id="editor-header" class="sticky top-0 z-20 bg-gray-900 border-b border-gray-700 p-3 flex flex-wrap items-center justify-center sm:justify-between gap-3 shadow-md flex-shrink-0">
         <!-- Group 1: Title & Actions -->
         <div class="flex items-center gap-3 flex-wrap justify-center">
             <img src="data:image/svg+xml,<svg width='200' height='200' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><defs><linearGradient id='grad4' x1='0%' y1='100%' x2='100%' y2='0%'><stop offset='0%' style='stop-color:%2306B6D4;stop-opacity:1' /><stop offset='100%' style='stop-color:%233B82F6;stop-opacity:1' /></linearGradient></defs><rect width='100' height='100' rx='20' fill='%231F2937'/><path d='M25 70 L75 25 L50 75 L45 50 Z' fill='url(%23grad4)'/></svg>" alt="EchoPad Logo" class="h-8 w-auto hidden sm:inline">
@@ -63,26 +64,26 @@
                 <svg id="mic-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-mic-fill" viewBox="0 0 16 16"><path d="M5 3a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0V3z"/><path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5z"/></svg>
                 <span id="transcribe-btn-text">Transcribe</span>
             </button>
-            <button id="select-all-btn" class="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-1 px-3 rounded-md text-sm transition-colors">Select</button>
-            <button id="clear-doc-btn" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-1 px-3 rounded-md text-sm transition-colors">Clear</button>
+            <button id="copy-all-btn" class="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-1 px-3 rounded-md text-sm transition-colors">Copy All</button>
+            <button id="paste-btn" class="bg-orange-600 hover:bg-orange-700 text-white font-semibold py-1 px-3 rounded-md text-sm transition-colors">Paste</button>
         </div>
         <!-- Group 2: AI & Settings -->
-        <div class="flex items-center flex-wrap justify-center gap-4">
+        <div class="flex items-center flex-wrap justify-center gap-2">
+            <button id="clear-doc-btn" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-1 px-3 rounded-md text-sm transition-colors">Clear</button>
             <button id="gemini-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-1 px-3 rounded-md text-sm transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-stars" viewBox="0 0 16 16"><path d="M7.657 6.247c.11-.33.576-.33.686 0l.645 1.937a2.89 2.89 0 0 0 1.829 1.828l1.936.645c.33.11.33.576 0 .686l-1.937.645a2.89 2.89 0 0 0-1.828 1.829l-.645 1.936a.361.361 0 0 1-.686 0l-.645-1.937a2.89 2.89 0 0 0-1.828-1.828l-1.937-.645a.361.361 0 0 1 0-.686l1.937-.645a2.89 2.89 0 0 0 1.828-1.828zM3.794 1.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387A1.73 1.73 0 0 0 4.58 5.794l-.387 1.162a.217.217 0 0 1-.412 0L3.4 5.794A1.73 1.73 0 0 0 2.206 4.58l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387A1.73 1.73 0 0 0 3.4 2.31zM10.893 10.893a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387a1.73 1.73 0 0 0-1.097 1.097l-.387 1.162a.217.217 0 0 1-.412 0l-.387-1.162a1.73 1.73 0 0 0-1.097-1.097l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387a1.73 1.73 0 0 0 1.097-1.097z"/></svg>
             </button>
-            <div class="flex items-center gap-2">
-                <label for="language-select" class="text-sm font-medium">Lang:</label>
-                <select id="language-select" class="bg-gray-700 border border-gray-600 rounded-md text-sm py-1 px-2">
-                    <option value="javascript">JavaScript</option><option value="python">Python</option><option value="htmlmixed">HTML</option><option value="css">CSS</option><option value="text/plain">Plain Text</option>
+            <select id="language-select" class="bg-gray-800 border border-gray-500 rounded-lg text-sm py-1.5 px-3 text-white appearance-none cursor-pointer hover:border-blue-400 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none transition-colors" style="background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 fill=%22%239ca3af%22 viewBox=%220 0 16 16%22><path d=%22M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 01.753 1.659l-4.796 5.48a1 1 0 01-1.506 0z%22/></svg>');background-repeat:no-repeat;background-position:right 8px center;padding-right:28px">
+                <option value="javascript">JavaScript</option><option value="python">Python</option><option value="css">CSS</option><option value="text/plain">Plain Text</option>
+            </select>
+            <select id="theme-select" class="bg-gray-800 border border-gray-500 rounded-lg text-sm py-1.5 px-3 text-white appearance-none cursor-pointer hover:border-blue-400 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none transition-colors max-w-[110px]" style="background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 fill=%22%239ca3af%22 viewBox=%220 0 16 16%22><path d=%22M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 01.753 1.659l-4.796 5.48a1 1 0 01-1.506 0z%22/></svg>');background-repeat:no-repeat;background-position:right 8px center;padding-right:28px">
+                    <option value="ayu-dark" selected>Dark</option>
+                    <option value="abcdef">Dark Gray</option>
+                    <option value="blackboard">Ocean</option>
+                    <option value="colorforth">Contrast</option>
+                    <option value="eclipse">Light</option>
+                    <option value="idea">Paper</option>
                 </select>
-            </div>
-            <div class="flex items-center gap-2">
-                <label for="theme-select" class="text-sm font-medium">Theme:</label>
-                <select id="theme-select" class="bg-gray-700 border border-gray-600 rounded-md text-sm py-1 px-2">
-                    <option value="material-darker">Dark</option><option value="default">Light</option>
-                </select>
-            </div>
         </div>
     </header>
     
@@ -105,6 +106,7 @@
         // Variables to manage real-time transcription
         let lastTranscript = '';
         let lastCursorPos = null;
+        let lastInterimEnd = null;
 
         /**
          * Shows a non-blocking notification.
@@ -176,7 +178,7 @@
             const userId = Math.floor(Math.random() * 9999999999).toString();
             firepadInstance = Firepad.fromCodeMirror(docRef, codeMirrorInstance, {
                 userId: userId,
-                defaultText: '// Welcome to EchoPad!\n// 1. Click "Transcribe" to start speaking.\n// 2. Click "Ask Gemini" for AI suggestions.\n// 3. Share the URL to collaborate.'
+                defaultText: '// Welcome to EchoPad!\n// 1. Share the URL to collaborate in real-time.\n// 2. Select text and tap ✨ for AI help.\n// 3. Use Copy All & Paste for quick cross-device sharing.'
             });
 
             setupEventListeners();
@@ -195,9 +197,48 @@
                 });
             };
 
-            document.getElementById('select-all-btn').onclick = () => codeMirrorInstance?.execCommand('selectAll');
+            window._copyAll = function() {
+                if (!codeMirrorInstance) return;
+                const text = codeMirrorInstance.getValue();
+                if (!text.trim()) { showNotification('Nothing to copy.', 'info'); return; }
+                navigator.clipboard.writeText(text).then(() => {
+                    showNotification('All content copied!', 'success');
+                }).catch(() => {
+                    // Fallback for older mobile browsers
+                    const ta = document.createElement('textarea');
+                    ta.value = text;
+                    ta.style.cssText = 'position:fixed;opacity:0';
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    ta.remove();
+                    showNotification('All content copied!', 'success');
+                });
+            };
+            document.getElementById('copy-all-btn').onclick = window._copyAll;
+            document.getElementById('paste-btn').onclick = () => {
+                navigator.clipboard.readText().then(text => {
+                    if (!text) { showNotification('Clipboard is empty.', 'info'); return; }
+                    const doc = codeMirrorInstance.getDoc();
+                    doc.replaceRange(text, doc.getCursor());
+                    showNotification('Pasted from clipboard!', 'success');
+                }).catch(() => {
+                    showNotification('Clipboard access denied. Allow it in browser settings.', 'error');
+                });
+            };
             document.getElementById('clear-doc-btn').onclick = () => firepadInstance?.setText('');
-            document.getElementById('theme-select').onchange = (e) => codeMirrorInstance.setOption('theme', e.target.value);
+            document.getElementById('theme-select').onchange = (e) => {
+                const theme = e.target.value;
+                if (theme !== 'default' && !document.querySelector(`link[href*="theme/${theme}.min.css"]`)) {
+                    const link = document.createElement('link');
+                    link.rel = 'stylesheet';
+                    link.href = `https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/${theme}.min.css`;
+                    link.onload = () => codeMirrorInstance.setOption('theme', theme);
+                    document.head.appendChild(link);
+                } else {
+                    codeMirrorInstance.setOption('theme', theme);
+                }
+            };
             document.getElementById('language-select').onchange = (e) => codeMirrorInstance.setOption('mode', e.target.value);
             
             document.getElementById('transcribe-btn').onclick = toggleTranscription;
@@ -268,6 +309,7 @@
                 // Reset tracking variables at the start of a new session
                 lastTranscript = '';
                 lastCursorPos = null;
+                lastInterimEnd = null;
             };
 
             recognition.onend = () => {
@@ -319,28 +361,23 @@
                 }
                 
                 const doc = codeMirrorInstance.getDoc();
-                
-                // If we have a new interim result, update the editor
-                if (interimTranscript) {
-                    const from = lastCursorPos || doc.getCursor('from');
-                    const to = doc.getCursor('to');
-                    doc.replaceRange(interimTranscript, from, to);
+
+                // Remove previous interim text before inserting new one
+                if (lastCursorPos && lastInterimEnd) {
+                    doc.replaceRange('', lastCursorPos, lastInterimEnd);
                 }
 
-                // If we have a final result, finalize it and prepare for the next utterance
                 if (finalTranscript) {
-                    const from = lastCursorPos || doc.getCursor('from');
-                    const to = doc.getCursor('to');
-                    doc.replaceRange(finalTranscript.trim() + ' ', from, to);
-                    
-                    // Reset for the next sentence
+                    const from = lastCursorPos || doc.getCursor();
+                    doc.replaceRange(finalTranscript.trim() + ' ', from);
                     lastCursorPos = null;
-                    lastTranscript = '';
+                    lastInterimEnd = null;
                 } else if (interimTranscript) {
-                    // If it's just an interim result, save the cursor position
                     if (!lastCursorPos) {
-                        lastCursorPos = doc.getCursor('from');
+                        lastCursorPos = doc.getCursor();
                     }
+                    doc.replaceRange(interimTranscript, lastCursorPos);
+                    lastInterimEnd = doc.getCursor();
                 }
             };
         }
@@ -385,11 +422,19 @@
             geminiBtn.disabled = true;
             geminiBtn.innerHTML = `<svg class="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
             try {
-                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+                const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
                 const language = document.getElementById('language-select').value;
-const prompt = `You are a helpful coding assistant. The user selected some text or question in text editor. Respond to any question or request - whether it's coding, explanations, behavior questions, or general queries. For code questions, provide working code with brief explanations. For other topics, give short, crisp answers. IMPORTANT: Your entire output must be plain text. Do NOT use any Markdown, bolding, italics, or code blocks. Your response must be raw, unformatted text.
+const prompt = `You are an expert coding assistant. The user selected text in a code editor.
 
-User Input:
+Rules:
+- If it's code: fix, improve, or write working code. Add brief inline comments only where needed.
+- If it's a question: give a short, direct answer.
+- If it's broken/incomplete code: fix it and explain what was wrong in one line.
+- Default to Python unless the user explicitly asks for a different language.
+- NEVER use Markdown formatting. No bold, italics, headers, or code fences. Output raw plain text only.
+- Keep responses concise. No filler.
+
+Selected text:
 ---
 ${selectedText}
 ---`;             const result = await model.generateContent(prompt);
@@ -419,14 +464,24 @@ ${selectedText}
             const header = document.getElementById('editor-header');
             if (!codeMirrorInstance) return;
             let lastScrollY = 0;
+            let hidden = false;
             const scroller = codeMirrorInstance.getScrollerElement();
             scroller.addEventListener('scroll', () => {
                 if (window.innerWidth < 640) {
                     const currentScrollY = scroller.scrollTop;
-                    if (currentScrollY > lastScrollY && currentScrollY > 50) {
-                        header.style.transform = 'translateY(-100%)';
-                    } else {
-                        header.style.transform = 'translateY(0)';
+                    const diff = currentScrollY - lastScrollY;
+                    if (diff > 10 && currentScrollY > 50 && !hidden) {
+                        header.style.maxHeight = '0';
+                        header.style.padding = '0 12px';
+                        header.style.borderBottom = 'none';
+                        header.style.overflow = 'hidden';
+                        hidden = true;
+                    } else if (diff < -10 && hidden) {
+                        header.style.maxHeight = '200px';
+                        header.style.padding = '';
+                        header.style.borderBottom = '';
+                        header.style.overflow = '';
+                        hidden = false;
                     }
                     lastScrollY = currentScrollY <= 0 ? 0 : currentScrollY;
                 }
