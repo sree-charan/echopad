@@ -422,7 +422,7 @@
             geminiBtn.disabled = true;
             geminiBtn.innerHTML = `<svg class="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
             try {
-                const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+                const models = ["gemini-3-flash-preview", "gemini-2.5-flash", "gemini-2.5-flash-lite"];
                 const language = document.getElementById('language-select').value;
 const prompt = `You are an expert coding assistant. The user selected text in a code editor.
 
@@ -437,9 +437,20 @@ Rules:
 Selected text:
 ---
 ${selectedText}
----`;             const result = await model.generateContent(prompt);
-                const response = await result.response;
-                const text = response.text();
+---`;
+                let result, response, text;
+                for (const modelName of models) {
+                    try {
+                        const model = genAI.getGenerativeModel({ model: modelName });
+                        result = await model.generateContent(prompt);
+                        response = await result.response;
+                        text = response.text();
+                        break;
+                    } catch (e) {
+                        console.warn(`${modelName} failed, trying next...`, e);
+                        if (modelName === models[models.length - 1]) throw e;
+                    }
+                }
                 const commentStart = language === 'python' ? '#' : '/*';
                 const commentEnd = language === 'python' ? '' : '*/';
                 const linePrefix = language === 'python' ? '# ' : ' * ';
